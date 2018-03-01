@@ -31,8 +31,9 @@ import org.neo4j.cypher.InvalidSemanticsException;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.graphdb.TransactionTerminatedException;
-import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.helpers.Exceptions;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -67,6 +68,8 @@ public class TransactionStateMachine implements StatementProcessor
         if ( ctx.currentTransaction != null )
         {
             spi.bindTransactionToCurrentThread( ctx.currentTransaction );
+
+            assert ctx.currentTransaction.isOpen();
         }
     }
 
@@ -78,7 +81,7 @@ public class TransactionStateMachine implements StatementProcessor
         {
             ensureNoPendingTerminationNotice();
 
-            state = state.run( ctx, spi, statement, params );
+            state = state.run( ctx, spi, statement, params, this::onTransactionClose );
 
             return ctx.currentStatementMetadata;
         }
@@ -102,6 +105,19 @@ public class TransactionStateMachine implements StatementProcessor
             ensureNoPendingTerminationNotice();
 
             state.streamResult( ctx, resultConsumer );
+        }
+        catch ( NullPointerException npe )
+        {
+            Thread currentThread = Thread.currentThread();
+
+            if ( ctx.currentTransactionCloser != null )
+            {
+                System.out.println(
+                        String.format( "%s: this transaction has been closed before by %s.", currentThread.getName(), ctx.currentTransactionCloser ) );
+                System.out.println( String.format( "%s: ---- stack trace is: %s", currentThread.getName(), ctx.currentTransactionCloserStackTrace ) );
+            }
+
+            throw npe;
         }
         finally
         {
@@ -190,18 +206,36 @@ public class TransactionStateMachine implements StatementProcessor
         this.ctx.querySource = querySource;
     }
 
+    private void onTransactionClose( long txId )
+    {
+        Thread currentThread = Thread.currentThread();
+
+        if ( ctx.currentTransactionCloser != null )
+        {
+            System.out.println( String.format( "%s: this transaction has been closed before by %s.", currentThread.getName(), ctx.currentTransactionCloser ) );
+            System.out.println( String.format( "%s: ---- stack trace is: %s", currentThread.getName(), ctx.currentTransactionCloserStackTrace ) );
+        }
+        else
+        {
+            ctx.currentTransactionCloser = currentThread.getName();
+            ctx.currentTransactionCloserStackTrace = Exceptions.stringify( currentThread, currentThread.getStackTrace() );
+        }
+    }
+
     enum State
     {
         AUTO_COMMIT
                 {
                     @Override
-                    State run( MutableTransactionState ctx, SPI spi, String statement,
-                               MapValue params ) throws KernelException
+                    State run( MutableTransactionState ctx, SPI spi, String statement, MapValue params, KernelTransaction.CloseListener onTxClose )
+                            throws KernelException
 
                     {
                         if ( BEGIN.matcher( statement ).matches() )
                         {
-                            ctx.currentTransaction = spi.beginTransaction( ctx.loginContext );
+                            ctx.currentTransaction = spi.beginTransaction( ctx.loginContext, onTxClose );
+                            ctx.currentTransactionCloser = null;
+                            ctx.currentTransactionCloserStackTrace = null;
 
                             Bookmark bookmark = Bookmark.fromParamsOrNull( params );
                             if ( bookmark != null )
@@ -298,7 +332,7 @@ public class TransactionStateMachine implements StatementProcessor
         EXPLICIT_TRANSACTION
                 {
                     @Override
-                    State run( MutableTransactionState ctx, SPI spi, String statement, MapValue params )
+                    State run( MutableTransactionState ctx, SPI spi, String statement, MapValue params, KernelTransaction.CloseListener onTxClose )
                             throws KernelException
                     {
                         if ( BEGIN.matcher( statement ).matches() )
@@ -362,8 +396,7 @@ public class TransactionStateMachine implements StatementProcessor
 
         abstract State run( MutableTransactionState ctx,
                             SPI spi,
-                            String statement,
-                            MapValue params ) throws KernelException;
+                            String statement, MapValue params, KernelTransaction.CloseListener onTxClose ) throws KernelException;
 
         abstract void streamResult( MutableTransactionState ctx,
                                     ThrowingConsumer<BoltResult, Exception> resultConsumer ) throws Exception;
@@ -480,6 +513,8 @@ public class TransactionStateMachine implements StatementProcessor
 
         /** The current transaction, if present */
         KernelTransaction currentTransaction;
+        String currentTransactionCloser;
+        String currentTransactionCloserStackTrace;
 
         Status pendingTerminationNotice;
 
@@ -517,7 +552,7 @@ public class TransactionStateMachine implements StatementProcessor
 
         long newestEncounteredTxId();
 
-        KernelTransaction beginTransaction( LoginContext loginContext );
+        KernelTransaction beginTransaction( LoginContext loginContext, KernelTransaction.CloseListener listener );
 
         void bindTransactionToCurrentThread( KernelTransaction tx );
 

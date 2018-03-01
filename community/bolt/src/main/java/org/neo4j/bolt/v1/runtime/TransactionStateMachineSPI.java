@@ -97,10 +97,16 @@ class TransactionStateMachineSPI implements TransactionStateMachine.SPI
     }
 
     @Override
-    public KernelTransaction beginTransaction( LoginContext loginContext )
+    public KernelTransaction beginTransaction( LoginContext loginContext, KernelTransaction.CloseListener listener )
     {
         db.beginTransaction( KernelTransaction.Type.explicit, loginContext );
-        return txBridge.getKernelTransactionBoundToThisThread( false );
+
+        KernelTransaction txc = txBridge.getKernelTransactionBoundToThisThread( false );
+        if ( listener != null )
+        {
+            txc.registerCloseListener( listener );
+        }
+        return txc;
     }
 
     @Override

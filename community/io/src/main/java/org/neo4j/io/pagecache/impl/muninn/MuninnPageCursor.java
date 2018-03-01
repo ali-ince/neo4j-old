@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
+import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.pagecache.CursorException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PageSwapper;
@@ -81,6 +82,12 @@ abstract class MuninnPageCursor extends PageCursor
     // CursorExceptionWithPreciseStackTrace with the message and stack trace pointing more or less directly at the
     // offending code.
     private Object cursorException;
+
+    private String closingThreadName;
+    private String closingThreadStackTrace;
+
+    private String closingLinksThreadName;
+    private String closingLinksThreadStackTrace;
 
     MuninnPageCursor( long victimPage, PageCursorTracer tracer, VersionContextSupplier versionContextSupplier )
     {
@@ -171,6 +178,10 @@ abstract class MuninnPageCursor extends PageCursor
     @Override
     public final void close()
     {
+        Thread closingThread = Thread.currentThread();
+        closingThreadName = closingThread.getName();
+        closingThreadStackTrace = Exceptions.stringify( closingThread, closingThread.getStackTrace() );
+
         if ( pagedFile == null )
         {
             return; // already closed
@@ -184,6 +195,10 @@ abstract class MuninnPageCursor extends PageCursor
 
     private void closeLinks( MuninnPageCursor cursor )
     {
+        Thread closingLinksThread = Thread.currentThread();
+        closingLinksThreadName = closingLinksThread.getName();
+        closingLinksThreadStackTrace = Exceptions.stringify( closingLinksThread, closingLinksThread.getStackTrace() );
+
         while ( cursor != null && cursor.pagedFile != null )
         {
             cursor.unpinCurrentPage();
@@ -429,6 +444,17 @@ abstract class MuninnPageCursor extends PageCursor
 
     long assertPagedFileStillMappedAndGetIdOfLastPage() throws FileIsNotMappedException
     {
+        if ( pagedFile == null )
+        {
+            Thread currentThread = Thread.currentThread();
+
+            System.out.println( String.format( "%s: pagedFile is null", currentThread.getName() ) );
+            System.out.println( String.format( "%s: ---- lastClosedBy => %s", currentThread.getName(), closingThreadName ) );
+            System.out.println( String.format( "%s: ---- lastClosedByStackTrace => %s", currentThread.getName(), closingThreadStackTrace ) );
+            System.out.println( String.format( "%s: ---- lastClosedLinksBy => %s", currentThread.getName(), closingLinksThreadName ) );
+            System.out.println( String.format( "%s: ---- lastClosedLinksByStackTrace => %s", currentThread.getName(), closingLinksThreadStackTrace ) );
+        }
+
         return pagedFile.getLastPageId();
     }
 

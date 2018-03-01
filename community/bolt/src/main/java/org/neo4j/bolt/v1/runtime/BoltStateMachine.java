@@ -383,7 +383,7 @@ public class BoltStateMachine implements AutoCloseable, ManagedBoltStateMachine
         // We should not switch threads when there's an active statement (executing/streaming)
         // Also, we're currently sticking to the thread when there's an open transaction due to
         // cursor errors we receive when a transaction is picked up by another thread linearly.
-        return statementProcessor().hasTransaction() || statementProcessor().hasOpenStatement();
+        return statementProcessor().hasOpenStatement();
     }
 
     public boolean hasOpenStatement()

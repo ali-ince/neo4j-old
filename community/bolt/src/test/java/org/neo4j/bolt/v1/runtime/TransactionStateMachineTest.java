@@ -73,16 +73,16 @@ public class TransactionStateMachineTest
     public void shouldTransitionToExplicitTransactionOnBegin() throws Exception
     {
         assertEquals( TransactionStateMachine.State.AUTO_COMMIT.run(
-                mutableState, stateMachineSPI, "begin", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "begin", EMPTY_MAP, null ),
                 TransactionStateMachine.State.EXPLICIT_TRANSACTION );
         assertEquals( TransactionStateMachine.State.AUTO_COMMIT.run(
-                mutableState, stateMachineSPI, "BEGIN", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "BEGIN", EMPTY_MAP, null ),
                 TransactionStateMachine.State.EXPLICIT_TRANSACTION );
         assertEquals( TransactionStateMachine.State.AUTO_COMMIT.run(
-                mutableState, stateMachineSPI, "   begin   ", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "   begin   ", EMPTY_MAP, null ),
                 TransactionStateMachine.State.EXPLICIT_TRANSACTION );
         assertEquals( TransactionStateMachine.State.AUTO_COMMIT.run(
-                mutableState, stateMachineSPI, "   BeGiN ;   ", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "   BeGiN ;   ", EMPTY_MAP, null ),
                 TransactionStateMachine.State.EXPLICIT_TRANSACTION );
     }
 
@@ -90,16 +90,16 @@ public class TransactionStateMachineTest
     public void shouldTransitionToAutoCommitOnCommit() throws Exception
     {
         assertEquals( TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                mutableState, stateMachineSPI, "commit", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "commit", EMPTY_MAP, null ),
                 TransactionStateMachine.State.AUTO_COMMIT );
         assertEquals( TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                mutableState, stateMachineSPI, "COMMIT", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "COMMIT", EMPTY_MAP, null ),
                 TransactionStateMachine.State.AUTO_COMMIT );
         assertEquals( TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                mutableState, stateMachineSPI, "   commit   ", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "   commit   ", EMPTY_MAP, null ),
                 TransactionStateMachine.State.AUTO_COMMIT );
         assertEquals( TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                mutableState, stateMachineSPI, "   CoMmIt ;   ", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "   CoMmIt ;   ", EMPTY_MAP, null ),
                 TransactionStateMachine.State.AUTO_COMMIT );
     }
 
@@ -107,16 +107,16 @@ public class TransactionStateMachineTest
     public void shouldTransitionToAutoCommitOnRollback() throws Exception
     {
         assertEquals( TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                mutableState, stateMachineSPI, "rollback", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "rollback", EMPTY_MAP, null ),
                 TransactionStateMachine.State.AUTO_COMMIT );
         assertEquals( TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                mutableState, stateMachineSPI, "ROLLBACK", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "ROLLBACK", EMPTY_MAP, null ),
                 TransactionStateMachine.State.AUTO_COMMIT );
         assertEquals( TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                mutableState, stateMachineSPI, "   rollback   ", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "   rollback   ", EMPTY_MAP, null ),
                 TransactionStateMachine.State.AUTO_COMMIT );
         assertEquals( TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                mutableState, stateMachineSPI, "   RoLlBaCk ;   ", EMPTY_MAP ),
+                mutableState, stateMachineSPI, "   RoLlBaCk ;   ", EMPTY_MAP, null ),
                 TransactionStateMachine.State.AUTO_COMMIT );
     }
 
@@ -126,7 +126,7 @@ public class TransactionStateMachineTest
         try
         {
             TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                    mutableState, stateMachineSPI, "begin", EMPTY_MAP );
+                    mutableState, stateMachineSPI, "begin", EMPTY_MAP, null );
         }
         catch ( QueryExecutionKernelException ex )
         {
@@ -135,7 +135,7 @@ public class TransactionStateMachineTest
         try
         {
             TransactionStateMachine.State.EXPLICIT_TRANSACTION.run(
-                    mutableState, stateMachineSPI, " BEGIN ", EMPTY_MAP );
+                    mutableState, stateMachineSPI, " BEGIN ", EMPTY_MAP, null );
         }
         catch ( QueryExecutionKernelException ex )
         {
@@ -149,7 +149,7 @@ public class TransactionStateMachineTest
         try
         {
             TransactionStateMachine.State.AUTO_COMMIT.run(
-                    mutableState, stateMachineSPI, "rollback", EMPTY_MAP );
+                    mutableState, stateMachineSPI, "rollback", EMPTY_MAP, null );
         }
         catch ( QueryExecutionKernelException ex )
         {
@@ -158,7 +158,7 @@ public class TransactionStateMachineTest
         try
         {
             TransactionStateMachine.State.AUTO_COMMIT.run(
-                    mutableState, stateMachineSPI, " ROLLBACK ", EMPTY_MAP );
+                    mutableState, stateMachineSPI, " ROLLBACK ", EMPTY_MAP, null );
         }
         catch ( QueryExecutionKernelException ex )
         {
@@ -172,7 +172,7 @@ public class TransactionStateMachineTest
         try
         {
             TransactionStateMachine.State.AUTO_COMMIT.run(
-                    mutableState, stateMachineSPI, "commit", EMPTY_MAP );
+                    mutableState, stateMachineSPI, "commit", EMPTY_MAP, null );
         }
         catch ( QueryExecutionKernelException ex )
         {
@@ -181,7 +181,7 @@ public class TransactionStateMachineTest
         try
         {
             TransactionStateMachine.State.AUTO_COMMIT.run(
-                    mutableState, stateMachineSPI, " COMMIT ", EMPTY_MAP );
+                    mutableState, stateMachineSPI, " COMMIT ", EMPTY_MAP, null );
         }
         catch ( QueryExecutionKernelException ex )
         {
