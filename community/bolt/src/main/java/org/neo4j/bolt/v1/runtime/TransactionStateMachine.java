@@ -271,19 +271,19 @@ public class TransactionStateMachine implements StatementProcessor
                                 ctx.lastStatement = statement;
                             }
 
-                            execute( ctx, spi, statement, params, spi.isPeriodicCommit( statement ) );
+                            execute( ctx, spi, statement, params, spi.isPeriodicCommit( statement ), onTxClose );
 
                             return AUTO_COMMIT;
                         }
                     }
 
-                    void execute( MutableTransactionState ctx, SPI spi, String statement, MapValue params, boolean isPeriodicCommit )
+                    void execute( MutableTransactionState ctx, SPI spi, String statement, MapValue params, boolean isPeriodicCommit, KernelTransaction.CloseListener onTxClose )
                             throws KernelException
                     {
                         // only acquire a new transaction when the statement does not contain periodic commit
                         if ( !isPeriodicCommit )
                         {
-                            ctx.currentTransaction = spi.beginTransaction( ctx.loginContext );
+                            ctx.currentTransaction = spi.beginTransaction( ctx.loginContext, onTxClose );
                         }
 
                         boolean failed = true;
