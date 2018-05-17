@@ -129,14 +129,13 @@ public class DefaultBoltConnection implements BoltConnection
     @Override
     public boolean processNextBatch()
     {
-        return processNextBatch( maxBatchSize );
+        return processNextBatch( maxBatchSize, false );
     }
 
-    protected boolean processNextBatch( int batchCount )
+    protected boolean processNextBatch( int batchCount, boolean exitIfNoJobsAvailable )
     {
         try
         {
-            boolean expectOneMessage = batchCount == 1;
             boolean waitForMessage = false;
             boolean loop = false;
             do
@@ -155,7 +154,7 @@ public class DefaultBoltConnection implements BoltConnection
                     queue.drainTo( batch, batchCount );
                     // if we expect one message but did not get any (because it was already
                     // processed), silently exit
-                    if ( batch.size() == 0 && !expectOneMessage )
+                    if ( batch.size() == 0 && !exitIfNoJobsAvailable )
                     {
                         // loop until we get a new job, if we cannot then validate
                         // transaction to check for termination condition. We'll
@@ -251,7 +250,7 @@ public class DefaultBoltConnection implements BoltConnection
         log.error( message, t );
         userLog.error( message );
         machine.markFailed( error );
-        processNextBatch( 1 );
+        processNextBatch( 1, true );
     }
 
     @Override
