@@ -19,15 +19,15 @@
  */
 package org.neo4j.bolt.runtime;
 
+import io.netty.channel.Channel;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.netty.channel.Channel;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import org.neo4j.bolt.BoltChannel;
 import org.neo4j.bolt.BoltKernelExtension;
@@ -136,6 +136,7 @@ public class DefaultBoltConnection implements BoltConnection
     {
         try
         {
+            boolean expectOneMessage = batchCount == 1;
             boolean waitForMessage = false;
             boolean loop = false;
             do
@@ -152,7 +153,9 @@ public class DefaultBoltConnection implements BoltConnection
                 if ( waitForMessage || !queue.isEmpty() )
                 {
                     queue.drainTo( batch, batchCount );
-                    if ( batch.size() == 0 )
+                    // if we expect one message but did not get any (because it was already
+                    // processed), silently exit
+                    if ( batch.size() == 0 && !expectOneMessage )
                     {
                         // loop until we get a new job, if we cannot then validate
                         // transaction to check for termination condition. We'll
